@@ -1,0 +1,6 @@
+---
+config-variables:
+  - ARDA_CLOUD_PROJECT_NAME
+paths:
+  .github/workflows/**/*.{yml,yaml}:
+  action.yaml:
