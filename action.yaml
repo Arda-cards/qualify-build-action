@@ -4,6 +4,113 @@ description: "..."
 inputs:
   ...
 outputs:
-  ...
-runs:
-  ...
+  mode:
+    description: "Build trigger classification: feature_branch, push_to_release_branch, or pull_request_to_release_branch."
+    value: ${{ steps.qualify-build.outputs.mode }}
+  kind:
+    description: "Build kind to run: publish when the action should produce a published artifact, otherwise test."
+    value: ${{ steps.define-build.outputs.kind }}
+  version:
+    description: "Version to publish. Set for publish builds; omitted for test builds."
+    value: ${{ steps.define-build.outputs.version }}
+  using: "composite"
+  steps:
+    - id: qualify-build
+      name: "Qualify build type"
+      shell: bash
+      run: |
+        [ "${{ runner.debug }}" == 1 ] && set -xv
+        set -u
+        
+        mode=feature_branch
+        if
+          gh ruleset check --repo "${{ github.repository }}" "${{ github.base_ref || github.ref_name }}" \
+            | grep -q context:validate-release ;
+        then
+          mode=push_to_release_branch
+        fi
+        
+        if [ "${{ github.event_name }}" == "pull_request" ] \
+            && (
+              [ "${{ github.event.pull_request.base.ref }}" == "main" ] 
+            ); then
+          mode=pull_request_to_release_branch
+        fi
+        echo "::notice::mode is ${mode}"
+        echo "mode=${mode}" >>"${GITHUB_OUTPUT}"
+    - id: define-version-validation
+      name: "Is a release or a feature version needed?"
+      shell: bash
+      run: |
+        [ "${{ runner.debug }}" == 1 ] && set -xv
+        set -u
+        
+        case "${{ steps.qualify-build.outputs.mode }}" in
+          feature_branch)
+            mode=feature
+            ;;
+          push_to_release_branch | pull_request_to_release_branch)
+            mode=release
+            ;;
+          *)
+            echo "::error::Unknown mode ${{ steps.qualify-build.outputs.mode }}"
+            exit 1
+            ;;
+        esac
+        echo "::notice::mode is ${mode}"
+        echo "mode=${mode}" >>"${GITHUB_OUTPUT}"
+    - id: clq-extract
+      name: "Extract tag from the changelog"
+      uses: denisa/clq-action@v1
+      with:
+        changeMap: .github/clq/changemap.json
+        mode: ${{ steps.define-version-validation.outputs.mode }}
+    - id: define-build
+      name: "Is this a test or publish build"
+      shell: bash
+      run: |
+        [ "${{ runner.debug }}" == 1 ] && set -xv
+        set -u
+        
+        function is_feature_branch_version() {
+          # major.minor.patch-user-issue
+          # user and issue relaxed to be any alphanumeric sequence 
+          if [[ "${{ steps.clq-extract.outputs.version }}" =~ ^[0-9]+(\.[0-9]+){2}(-[[:alnum:]]+){2}(-.+)?$ ]]; then
+            return 0
+          fi
+          return 1
+        }
+        
+        function is_publishable_feature_branch() {
+          if ( [ "${{ github.event_name }}" == "push" ] && is_feature_branch_version ); then
+            return 0
+          fi
+          return 1
+        }
+        
+        if [ "${{ steps.define-version-validation.outputs.mode }}" == "release" ] \
+            && [ "${{ steps.clq-extract.outputs.status }}" != "released" ]; then
+          echo "::error::${{ steps.clq-extract.outputs.version }} is not a valid version for a release branch"
+          {
+            echo "# Version Validation Error"
+            echo "Release branches, or a pull request targeting them, must have a release version."
+            echo "${{ steps.clq-extract.outputs.version }} is not valid for release branches"
+          } >>"${GITHUB_STEP_SUMMARY}"
+          exit 1
+        fi
+        
+        if [ "${{ steps.qualify-build.outputs.mode }}" == "push_to_release_branch" ]; then
+          kind=publish
+          version="${{ steps.clq-extract.outputs.version }}"
+        elif is_publishable_feature_branch; then
+          kind=publish
+          version="${{ steps.clq-extract.outputs.version }}-${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }}"
+        else
+          kind=test
+        fi
+        echo "::notice::kind is ${kind}"
+        echo "kind=${kind}" >>"${GITHUB_OUTPUT}"
+        echo "::notice::version is ${version:-undefined}"
+        if [ -v version ]; then
+          echo "version=${version}" >>"${GITHUB_OUTPUT}";
+        fi
