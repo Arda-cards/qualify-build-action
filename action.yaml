@@ -10,9 +10,13 @@ outputs:
   kind:
     description: "Build kind to run: publish when the action should produce a published artifact, otherwise test."
     value: ${{ steps.define-build.outputs.kind }}
+  tag:
+    description: "Tag to publish. Set for publish builds; omitted for test builds."
+    value: ${{ steps.define-build.outputs.tag }}
   version:
     description: "Version to publish. Set for publish builds; omitted for test builds."
     value: ${{ steps.define-build.outputs.version }}
+runs:
   using: "composite"
   steps:
     - id: qualify-build
@@ -113,4 +117,5 @@ outputs:
         echo "::notice::version is ${version:-undefined}"
         if [ -v version ]; then
           echo "version=${version}" >>"${GITHUB_OUTPUT}";
+          echo "tag=v${version}" >>"${GITHUB_OUTPUT}";
         fi
