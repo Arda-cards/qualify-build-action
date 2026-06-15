@@ -1,8 +1,6 @@
 ---
-name: "..."
-description: "..."
-inputs:
-  ...
+name: "qualify-build-action"
+description: "Analyses the job and makes decisions about what kind of build to run."
 outputs:
   mode:
     description: "Build trigger classification: feature_branch, push_to_release_branch, or pull_request_to_release_branch."
