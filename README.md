@@ -7,17 +7,17 @@ This action analyzes the GitHub event, the target branch and the project changel
 
 This action expects the project to have been checked out already in the `github.workspace` and will look for:
 
-| file                         | required | description                                      |
-|------------------------------|----------|--------------------------------------------------|
-| `CHANGELOG.md`               | yes      | Contains the version extracted by `clq-action`.  |
-| `.github/clq/changemap.json` | yes      | Configures changelog version extraction.         |
+| file                         | required | description                                     |
+|------------------------------|----------|-------------------------------------------------|
+| `CHANGELOG.md`               | yes      | Contains the version extracted by `clq-action`. |
+| `.github/clq/changemap.json` | yes      | Configures changelog version extraction.        |
 
 ## Build qualification
 
 The action first classifies the workflow trigger.
 
-| mode                             | description                                                                 |
-|----------------------------------|-----------------------------------------------------------------------------|
+| mode                             | description                                                                  |
+|----------------------------------|------------------------------------------------------------------------------|
 | `feature_branch`                 | Default mode for branches that do not require release validation.            |
 | `push_to_release_branch`         | A push to a branch whose ruleset includes the `context:validate-release`.    |
 | `pull_request_to_release_branch` | A pull request targeting `main`; the changelog must contain a release value. |
@@ -36,11 +36,12 @@ Feature branch publish versions must match `major.minor.patch-user-issue`, with 
 
 ## Outputs
 
-| name      | description                                                                                  |
-|-----------|----------------------------------------------------------------------------------------------|
+| name      | description                                                                                                    |
+|-----------|----------------------------------------------------------------------------------------------------------------|
 | `mode`    | Build trigger classification: `feature_branch`, `push_to_release_branch`, or `pull_request_to_release_branch`. |
-| `kind`    | Build kind to run: `publish` when the workflow should produce published artifacts, otherwise `test`. |
-| `version` | Version to publish. Set for publish builds; omitted for test builds.                         |
+| `kind`    | Build kind to run: `publish` when the workflow should produce published artifacts, otherwise `test`.           |
+| `tag`     | Version to tag, that is the version prefixed with a `v`. Set for publish builds; omitted for test builds.      |
+| `version` | Version to publish. Set for publish builds; omitted for test builds.                                           |
 
 ## Arguments
 
