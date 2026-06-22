@@ -59,7 +59,7 @@ jobs:
       kind: ${{ steps.qualify-build.outputs.kind }}
       version: ${{ steps.qualify-build.outputs.version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - id: qualify-build
         uses: Arda-cards/qualify-build-action@v1
         env:
