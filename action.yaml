@@ -20,6 +20,8 @@ runs:
     - id: qualify-build
       name: "Qualify build type"
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         [ "${{ runner.debug }}" == 1 ] && set -xv
         set -u
