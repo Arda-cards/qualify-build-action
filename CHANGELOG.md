@@ -18,6 +18,12 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
   - `Fixed` for any bugfixes.
   - `Security` in case of vulnerabilities.
 
+## [1.0.1] - 2026-06-23
+
+### Fixed
+
+- To use GitHub CLI in a GitHub Actions workflow, set the `GH_TOKEN` environment variable.
+
 ## [1.0.0] - 2026-06-22
 
 ### Added
