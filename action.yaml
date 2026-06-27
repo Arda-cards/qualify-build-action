@@ -1,24 +1,36 @@
 ---
 name: "qualify-build-action"
 description: "Analyses the job and makes decisions about what kind of build to run."
+inputs:
+  feature_branch_version_regex:
+    description: "Regex to match feature branch versions."
+    required: false
+    default: ^[0-9]+(\.[0-9]+){2}(-[[:alnum:]]+){2}(-.+)?$
+  workflow_name:
+    description: "Name of a workflow that protected branches are be validated against."
+    required: false
+    default: context:validate-release
 outputs:
-  mode:
-    description: "Build trigger classification: feature_branch, push_to_release_branch, or pull_request_to_release_branch."
-    value: ${{ steps.qualify-build.outputs.mode }}
   kind:
     description: "Build kind to run: publish when the action should produce a published artifact, otherwise test."
     value: ${{ steps.define-build.outputs.kind }}
   tag:
     description: "Tag to publish. Set for publish builds; omitted for test builds."
     value: ${{ steps.define-build.outputs.tag }}
+  target:
+    description: "Target of the build: feature or release."
+    value: ${{ steps.define-target.outputs.target }}
+  trigger:
+    description: "Build trigger classification: push_to_feature_branch, push_to_release_branch, pull_request_to_release_branch, or pull_request_to_feature_branch."
+    value: ${{ steps.qualify-build.outputs.trigger }}
   version:
     description: "Version to publish. Set for publish builds; omitted for test builds."
     value: ${{ steps.define-build.outputs.version }}
 runs:
   using: "composite"
   steps:
-    - id: qualify-build
-      name: "Qualify build type"
+    - id: define-target
+      name: "Is a release or a feature version needed?"
       shell: bash
       env:
         GH_TOKEN: ${{ env.GH_TOKEN || github.token }}
@@ -26,49 +38,46 @@ runs:
         [ "${{ runner.debug }}" == 1 ] && set -xv
         set -u
         
-        mode=feature_branch
         if
-          gh ruleset check --repo "${{ github.repository }}" "${{ github.base_ref || github.ref_name }}" \
-            | grep -q context:validate-release ;
+            gh ruleset check --repo "${{ github.repository }}" "${{ github.base_ref || github.ref }}" \
+              | grep -q ${{ inputs.workflow_name}} ;
         then
-          mode=push_to_release_branch
+            target=release
+        else
+            target=feature
         fi
-        
-        if [ "${{ github.event_name }}" == "pull_request" ] \
-            && (
-              [ "${{ github.event.pull_request.base.ref }}" == "main" ] 
-            ); then
-          mode=pull_request_to_release_branch
-        fi
-        echo "::notice::mode is ${mode}"
-        echo "mode=${mode}" >>"${GITHUB_OUTPUT}"
-    - id: define-version-validation
-      name: "Is a release or a feature version needed?"
+        echo "::notice::target is ${target}"
+        echo "target=${target}" >>"${GITHUB_OUTPUT}"
+    - id: qualify-build
+      name: "Qualify build type"
       shell: bash
       run: |
         [ "${{ runner.debug }}" == 1 ] && set -xv
         set -u
         
-        case "${{ steps.qualify-build.outputs.mode }}" in
-          feature_branch)
-            mode=feature
-            ;;
-          push_to_release_branch | pull_request_to_release_branch)
-            mode=release
-            ;;
-          *)
-            echo "::error::Unknown mode ${{ steps.qualify-build.outputs.mode }}"
-            exit 1
-            ;;
+        case "${{ github.event_name }}" in
+        push)
+          trigger=push_to_${{ steps.define-target.outputs.target }}_branch
+          break
+          ;;
+        pull_request)
+          trigger=pull_request_to_${{ steps.define-target.outputs.target }}_branch
+          break          
+          ;;
+        *)
+          echo "::error::Unsupported event: ${{ github.event_name }}"
+          exit 1
+          ;;
         esac
-        echo "::notice::mode is ${mode}"
-        echo "mode=${mode}" >>"${GITHUB_OUTPUT}"
+        
+        echo "::notice::trigger is ${trigger}"
+        echo "trigger=${trigger}" >>"${GITHUB_OUTPUT}"
     - id: clq-extract
       name: "Extract tag from the changelog"
       uses: denisa/clq-action@v1
       with:
         changeMap: .github/clq/changemap.json
-        mode: ${{ steps.define-version-validation.outputs.mode }}
+        mode: ${{ steps.define-target.outputs.target }}
     - id: define-build
       name: "Is this a test or publish build"
       shell: bash
@@ -79,7 +88,7 @@ runs:
         function is_feature_branch_version() {
           # major.minor.patch-user-issue
           # user and issue relaxed to be any alphanumeric sequence 
-          if [[ "${{ steps.clq-extract.outputs.version }}" =~ ^[0-9]+(\.[0-9]+){2}(-[[:alnum:]]+){2}(-.+)?$ ]]; then
+          if [[ "${{ steps.clq-extract.outputs.version }}" =~ ${{ feature_branch_version_regex }} ]]; then
             return 0
           fi
           return 1
@@ -92,7 +101,7 @@ runs:
           return 1
         }
         
-        if [ "${{ steps.define-version-validation.outputs.mode }}" == "release" ] \
+        if [ "${{ steps.define-target.outputs.target }}" == "release" ] \
             && [ "${{ steps.clq-extract.outputs.status }}" != "released" ]; then
           echo "::error::${{ steps.clq-extract.outputs.version }} is not a valid version for a release branch"
           {
@@ -103,7 +112,7 @@ runs:
           exit 1
         fi
         
-        if [ "${{ steps.qualify-build.outputs.mode }}" == "push_to_release_branch" ]; then
+        if [ "${{ steps.qualify-build.outputs.trigger }}" == "push_to_release_branch" ]; then
           kind=publish
           version="${{ steps.clq-extract.outputs.version }}"
         elif is_publishable_feature_branch; then
