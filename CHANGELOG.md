@@ -18,6 +18,19 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
   - `Fixed` for any bugfixes.
   - `Security` in case of vulnerabilities.
 
+## [2.0.0] - 2026-06-27
+
+### Changed
+
+- Renamed the output `mode` to `trigger`.
+
+### Added
+
+- New `trigger` for pull requests targeting feature branches: `pull_request_to_feature_branch`.
+- New output `target` to indicate whether the build targets a `feature` or a `release` branch.
+- New optional input `feature_branch_version_regex` to set a custom pattern for feature branch versions.
+- New optional input `workflow_name` for a workflow that protected branches should be validated against.
+
 ## [1.0.1] - 2026-06-23
 
 ### Fixed
