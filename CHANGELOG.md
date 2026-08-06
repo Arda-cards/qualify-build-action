@@ -18,6 +18,12 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
   - `Fixed` for any bugfixes.
   - `Security` in case of vulnerabilities.
 
+## [2.1.0] - 2026-08-06
+
+### Added
+
+- A build running from a merge queue is now classified rather than rejected. `merge_group` was not among the events this action recognised, so a queued entry failed outright and the queue dropped it — which made adopting a merge queue impossible for any repository using this action. Such a build reports the trigger `merge_group_to_release_branch` and, like a pull request, qualifies as a test build: the queue gates a merge, it does not publish. The branch a build targets is now read from the merge-queue payload when present, because a queued entry runs on a temporary `gh-readonly-queue/…` ref that names the queue rather than the branch being merged into.
+
 ## [2.0.0] - 2026-06-27
 
 ### Changed

@@ -21,7 +21,7 @@ outputs:
     description: "Target of the build: feature or release."
     value: ${{ steps.define-target.outputs.target }}
   trigger:
-    description: "Build trigger classification: push_to_feature_branch, push_to_release_branch, pull_request_to_release_branch, or pull_request_to_feature_branch."
+    description: "Build trigger classification: <event>_to_<target>_branch, where <event> is one of merge_group, pull_request or push, and <target> is one of feature or release."
     value: ${{ steps.qualify-build.outputs.trigger }}
   version:
     description: "Version to publish. Set for publish builds; omitted for test builds."
@@ -38,8 +38,14 @@ runs:
         [ "${{ runner.debug }}" == 1 ] && set -xv
         set -u
         
+        # A merge_group event runs on a temporary gh-readonly-queue/... ref, so ref_name names the
+        # queue branch rather than the branch being merged into. The payload carries the real
+        # destination as a full ref; strip refs/heads/ so all three events name a branch the same way.
+        branch="${{ github.event.merge_group.base_ref || github.base_ref || github.ref_name }}"
+        branch="${branch#refs/heads/}"
+
         if
-            gh ruleset check --repo "${{ github.repository }}" "${{ github.base_ref || github.ref_name }}" \
+            gh ruleset check --repo "${{ github.repository }}" "${branch}" \
               | grep -q '${{ inputs.workflow_name}}' ;
         then
             target=release
@@ -56,7 +62,7 @@ runs:
         set -u
         
         case "${{ github.event_name }}" in
-        pull_request|push)
+        merge_group|pull_request|push)
           trigger=${{ github.event_name }}_to_${{ steps.define-target.outputs.target }}_branch
           ;;
         *)
