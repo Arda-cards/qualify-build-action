@@ -18,6 +18,32 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
   - `Fixed` for any bugfixes.
   - `Security` in case of vulnerabilities.
 
+## [2.1.0] - 2026-08-06
+
+### Added
+
+- Classify a build running from a merge queue rather than rejecting it. `merge_group` was not among the
+  recognised events, so a queued entry failed outright and the queue dropped it, which made a merge queue
+  unadoptable in any repository using this action. Such a build reports the trigger
+  `merge_group_to_release_branch`, or `merge_group_to_feature_branch` where the destination branch's
+  ruleset does not require the configured `workflow_name` check. Either way it qualifies as a test build,
+  like a pull request: the queue gates a merge, it does not publish.
+- New optional input `validate_against_base`, defaulting to `true`, passed through to `clq-action`. That
+  check requires a pull request to introduce exactly one new changelog version, which is right where the
+  author edits `CHANGELOG.md` and wrong where the changelog is composed after merge — there the pull
+  request introduces none, and every pull request would be rejected. Repositories on the composed model
+  set it to `false`; the guarantee is not lost, only relocated to a gate that refuses any edit to
+  `CHANGELOG.md` at all.
+- New optional input `changelog_dir`, defaulting to `.changelog`. A `feature-build:` key in the
+  frontmatter of the single file there marks the branch as a feature build, and the published version
+  becomes `<changelog version>-<marker>-<run>`. Where a repository composes its changelog after merge,
+  the version in `CHANGELOG.md` carries no feature suffix for the old mechanism to read; the marker
+  moves the signal to the file the author is already writing. A branch with no marker behaves exactly
+  as before.
+- Read the branch a build targets from the merge-queue payload when it is present. A queued entry runs on
+  a temporary `gh-readonly-queue/...` ref, so neither `github.base_ref` nor `github.ref_name` names the
+  branch being merged into, and the ruleset probe would conclude the target is unprotected.
+
 ## [2.0.0] - 2026-06-27
 
 ### Changed
