@@ -6,6 +6,12 @@ inputs:
     description: "Regex to match feature branch versions."
     required: false
     default: ^[0-9]+(\.[0-9]+){2}(-[[:alnum:]]+){2}(-.+)?$
+  changelog_dir:
+    description: >-
+      Directory holding per-pull-request changelog files. A `feature-build:` key in the
+      frontmatter of the single file there marks the branch as a feature build.
+    required: false
+    default: .changelog
   validate_against_base:
     description: >-
       Whether a pull request must introduce exactly one new changelog version.
@@ -86,6 +92,37 @@ runs:
         changeMap: .github/clq/changemap.json
         mode: ${{ steps.define-target.outputs.target }}
         validateAgainstBase: ${{ inputs.validate_against_base }}
+    - id: feature-marker
+      name: "Is this branch marked as a feature build?"
+      shell: bash
+      run: |
+        [ "${{ runner.debug }}" == 1 ] && set -xv
+        set -u
+
+        # Where a repository composes its changelog after merge, the version in
+        # CHANGELOG.md no longer carries a feature suffix — there is nothing to
+        # read it from. The marker moves to the pull request's own changelog
+        # file, where the author is already writing.
+        readonly dir="${{ inputs.changelog_dir }}"
+        marker=''
+
+        if [ -d "${dir}" ]; then
+          mapfile -t files < <(find "${dir}" -maxdepth 1 -name '*.md' ! -name 'README.md' | sort)
+          if [ "${#files[@]}" -gt 1 ]; then
+            echo "::error::${dir} holds ${#files[@]} files; a branch carries at most one"
+            exit 1
+          fi
+          if [ "${#files[@]}" -eq 1 ] && [ "$(head -n1 "${files[0]}")" == "---" ]; then
+            marker="$(sed -n '2,/^---$/p' "${files[0]}" |
+              sed -nE 's|^feature-build:[[:space:]]*"?([^"[:space:]]+)"?[[:space:]]*$|\1|p' |
+              head -n1)"
+          fi
+        fi
+
+        if [ -n "${marker}" ]; then
+          echo "::notice::feature build marked as ${marker}"
+        fi
+        echo "marker=${marker}" >>"${GITHUB_OUTPUT}"
     - id: define-build
       name: "Is this a test or publish build"
       shell: bash
@@ -93,15 +130,23 @@ runs:
         [ "${{ runner.debug }}" == 1 ] && set -xv
         set -u
         
+        readonly marker="${{ steps.feature-marker.outputs.marker }}"
+
+        # Two ways a branch can be a feature build. The version suffix is the
+        # original, and still right where the author edits CHANGELOG.md. The
+        # marker is for repositories that compose it after merge, where the
+        # version carries no suffix to find.
+        readonly feature_version="${marker:+${{ steps.clq-extract.outputs.version }}-${marker}}"
+
         function is_feature_branch_version() {
           # major.minor.patch-user-issue
-          # user and issue relaxed to be any alphanumeric sequence 
-          if [[ "${{ steps.clq-extract.outputs.version }}" =~ ${{ inputs.feature_branch_version_regex }} ]]; then
+          # user and issue relaxed to be any alphanumeric sequence
+          if [[ "${feature_version:-${{ steps.clq-extract.outputs.version }}}" =~ ${{ inputs.feature_branch_version_regex }} ]]; then
             return 0
           fi
           return 1
         }
-        
+
         function is_publishable_feature_branch() {
           if ( [ "${{ github.event_name }}" == "push" ] && is_feature_branch_version ); then
             return 0
@@ -125,7 +170,7 @@ runs:
           version="${{ steps.clq-extract.outputs.version }}"
         elif is_publishable_feature_branch; then
           kind=publish
-          version="${{ steps.clq-extract.outputs.version }}-${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }}"
+          version="${feature_version:-${{ steps.clq-extract.outputs.version }}}-${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }}"
         else
           kind=test
         fi

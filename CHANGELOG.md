@@ -34,6 +34,12 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
   request introduces none, and every pull request would be rejected. Repositories on the composed model
   set it to `false`; the guarantee is not lost, only relocated to a gate that refuses any edit to
   `CHANGELOG.md` at all.
+- New optional input `changelog_dir`, defaulting to `.changelog`. A `feature-build:` key in the
+  frontmatter of the single file there marks the branch as a feature build, and the published version
+  becomes `<changelog version>-<marker>-<run>`. Where a repository composes its changelog after merge,
+  the version in `CHANGELOG.md` carries no feature suffix for the old mechanism to read; the marker
+  moves the signal to the file the author is already writing. A branch with no marker behaves exactly
+  as before.
 - Read the branch a build targets from the merge-queue payload when it is present. A queued entry runs on
   a temporary `gh-readonly-queue/...` ref, so neither `github.base_ref` nor `github.ref_name` names the
   branch being merged into, and the ruleset probe would conclude the target is unprotected.
