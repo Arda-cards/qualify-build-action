@@ -22,7 +22,14 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
 
 ### Added
 
-- A build running from a merge queue is now classified rather than rejected. `merge_group` was not among the events this action recognised, so a queued entry failed outright and the queue dropped it — which made adopting a merge queue impossible for any repository using this action. Such a build reports the trigger `merge_group_to_release_branch` and, like a pull request, qualifies as a test build: the queue gates a merge, it does not publish. The branch a build targets is now read from the merge-queue payload when present, because a queued entry runs on a temporary `gh-readonly-queue/…` ref that names the queue rather than the branch being merged into.
+- Classify a build running from a merge queue rather than rejecting it. `merge_group` was not among the
+  recognised events, so a queued entry failed outright and the queue dropped it, which made a merge queue
+  unadoptable in any repository using this action. Such a build reports the trigger
+  `merge_group_to_release_branch` and, like a pull request, qualifies as a test build: the queue gates a
+  merge, it does not publish.
+- Read the branch a build targets from the merge-queue payload when it is present. A queued entry runs on
+  a temporary `gh-readonly-queue/...` ref, so neither `github.base_ref` nor `github.ref_name` names the
+  branch being merged into, and the ruleset probe would conclude the target is unprotected.
 
 ## [2.0.0] - 2026-06-27
 
