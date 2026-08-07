@@ -50,9 +50,6 @@ runs:
         [ "${{ runner.debug }}" == 1 ] && set -xv
         set -u
         
-        # A merge_group event runs on a temporary gh-readonly-queue/... ref, so ref_name names the
-        # queue branch rather than the branch being merged into. The payload carries the real
-        # destination as a full ref; strip refs/heads/ so all three events name a branch the same way.
         branch="${{ github.event.merge_group.base_ref || github.base_ref || github.ref_name }}"
         branch="${branch#refs/heads/}"
 
@@ -99,10 +96,6 @@ runs:
         [ "${{ runner.debug }}" == 1 ] && set -xv
         set -u
 
-        # Where a repository composes its changelog after merge, the version in
-        # CHANGELOG.md no longer carries a feature suffix — there is nothing to
-        # read it from. The marker moves to the pull request's own changelog
-        # file, where the author is already writing.
         readonly dir="${{ inputs.changelog_dir }}"
         marker=''
 
@@ -132,10 +125,6 @@ runs:
         
         readonly marker="${{ steps.feature-marker.outputs.marker }}"
 
-        # Two ways a branch can be a feature build. The version suffix is the
-        # original, and still right where the author edits CHANGELOG.md. The
-        # marker is for repositories that compose it after merge, where the
-        # version carries no suffix to find.
         readonly feature_version="${marker:+${{ steps.clq-extract.outputs.version }}-${marker}}"
 
         function is_feature_branch_version() {
