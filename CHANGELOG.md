@@ -25,8 +25,9 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
 - Classify a build running from a merge queue rather than rejecting it. `merge_group` was not among the
   recognised events, so a queued entry failed outright and the queue dropped it, which made a merge queue
   unadoptable in any repository using this action. Such a build reports the trigger
-  `merge_group_to_release_branch` and, like a pull request, qualifies as a test build: the queue gates a
-  merge, it does not publish.
+  `merge_group_to_release_branch`, or `merge_group_to_feature_branch` where the destination branch's
+  ruleset does not require the configured `workflow_name` check. Either way it qualifies as a test build,
+  like a pull request: the queue gates a merge, it does not publish.
 - Read the branch a build targets from the merge-queue payload when it is present. A queued entry runs on
   a temporary `gh-readonly-queue/...` ref, so neither `github.base_ref` nor `github.ref_name` names the
   branch being merged into, and the ruleset probe would conclude the target is unprotected.
