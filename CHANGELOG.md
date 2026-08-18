@@ -18,6 +18,23 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
   - `Fixed` for any bugfixes.
   - `Security` in case of vulnerabilities.
 
+## [2.2.0] - 2026-08-18
+
+### Added
+
+- `feature_marker`, naming the feature-build marker for this ref so the action takes it as
+  given instead of deriving one. Deriving it meant knowing where a repository keeps its
+  changelog entries and how a marker is spelled inside one, which is the caller's
+  convention and not this action's — the repositories calling it do not share one.
+
+### Deprecated
+
+- `changelog_dir`, now consulted only when `feature_marker` is unset. It cannot see a
+  marker written in a pull-request body, so one put there is silently ignored; and it
+  fails when the directory holds more than one entry file even if none of them carries a
+  marker, which blocks every build in a repository whose merge queue batches two entries
+  together. Both faults follow from reading the filesystem rather than being told.
+
 ## [2.1.0] - 2026-08-06
 
 ### Added

@@ -6,10 +6,29 @@ inputs:
     description: "Regex to match feature branch versions."
     required: false
     default: ^[0-9]+(\.[0-9]+){2}(-[[:alnum:]]+){2}(-.+)?$
+  feature_marker:
+    description: >-
+      The feature-build marker for this ref, or empty for an ordinary build. Supply this
+      and the action asks nothing about changelogs: it takes the answer and uses it.
+
+      Determining the marker means knowing where a repository keeps its changelog entries
+      and how it spells a marker inside one. That is the caller's convention, not this
+      action's, and the fifteen-odd repositories calling it do not share it. Reading it
+      here made a generic action depend on one workflow's file layout, which is the
+      coupling `DQ-002` already refused for the assembly-commit convention.
+
+      Leave it unset for the legacy behaviour below, which is deprecated.
+    required: false
+    default: ""
   changelog_dir:
     description: >-
-      Directory holding per-pull-request changelog files. A `feature-build:` key in the
-      frontmatter of the single file there marks the branch as a feature build.
+      DEPRECATED, and only consulted when `feature_marker` is unset. Directory holding
+      per-pull-request changelog files; a `feature-build:` key in the frontmatter of the
+      single file there marks the branch as a feature build.
+
+      This cannot see a marker written in a pull-request body, and it treats "more than
+      one entry file" as an error even when none of them carries a marker — which blocks
+      every build in a repository whose queue batches two entries together.
     required: false
     default: .changelog
   validate_against_base:
@@ -96,9 +115,24 @@ runs:
         [ "${{ runner.debug }}" == 1 ] && set -xv
         set -u
 
+        readonly supplied="${{ inputs.feature_marker }}"
+
+        # Supplied by the caller: take it and ask nothing further. The caller knows where
+        # its entries live and how a marker is spelled inside one; this action does not,
+        # and every attempt to guess has been a source of defects.
+        if [ -n "${supplied}" ]; then
+          echo "::notice::feature build marked as ${supplied} (supplied by the caller)"
+          echo "marker=${supplied}" >>"${GITHUB_OUTPUT}"
+          exit 0
+        fi
+
         readonly dir="${{ inputs.changelog_dir }}"
         marker=''
 
+        # Legacy path, kept so that callers which have not migrated keep working
+        # unchanged. Its two known faults are why `feature_marker` exists: it cannot see
+        # a marker in a pull-request body, and it rejects on file count rather than on
+        # marker count, so two unmarked entries fail a build that has nothing wrong.
         if [ -d "${dir}" ]; then
           mapfile -t files < <(find "${dir}" -maxdepth 1 -name '*.md' ! -name 'README.md' | sort)
           if [ "${#files[@]}" -gt 1 ]; then
