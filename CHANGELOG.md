@@ -22,6 +22,11 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
 
 ### Added
 
+- `derive_feature_marker`, to be set `false` by any caller supplying `feature_marker`.
+  Without it, "no marker" — the ordinary case — was indistinguishable from a caller that
+  said nothing, so an unmarked branch still fell through to the derivation. Measured on
+  2026-08-19: a merge group staging two entry files failed on the derivation's file count
+  even though the caller had already answered.
 - `feature_marker`, naming the feature-build marker for this ref so the action takes it as
   given instead of deriving one. Deriving it meant knowing where a repository keeps its
   changelog entries and how a marker is spelled inside one, which is the caller's

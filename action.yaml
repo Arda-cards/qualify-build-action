@@ -20,6 +20,22 @@ inputs:
       Leave it unset for the legacy behaviour below, which is deprecated.
     required: false
     default: ""
+  derive_feature_marker:
+    description: >-
+      DEPRECATED. Whether to fall back to deriving the marker from `changelog_dir` when
+      `feature_marker` is empty.
+
+      Set this to `false` whenever the caller supplies `feature_marker`, because **"no
+      marker" is an answer**. Deciding by whether the value is empty makes the ordinary
+      case — an unmarked branch — indistinguishable from a caller that said nothing, and
+      sends it down the derivation below anyway. That is not academic: the derivation
+      rejects a directory holding more than one entry file, which is what a merge queue
+      stages every time it batches two pull requests, so a caller that had answered
+      correctly still had its queue blocked.
+
+      Defaults to `true` so that callers which have not migrated keep working unchanged.
+    required: false
+    default: "true"
   changelog_dir:
     description: >-
       DEPRECATED, and only consulted when `feature_marker` is unset. Directory holding
@@ -116,10 +132,23 @@ runs:
         set -u
 
         readonly supplied="${{ inputs.feature_marker }}"
+        readonly derive="${{ inputs.derive_feature_marker }}"
 
-        # Supplied by the caller: take it and ask nothing further. The caller knows where
-        # its entries live and how a marker is spelled inside one; this action does not,
-        # and every attempt to guess has been a source of defects.
+        # The caller owns the answer, and an empty answer is still an answer. Taking it
+        # only when it is non-empty leaves the ordinary case — an unmarked branch — falling
+        # through to a derivation the caller has already replaced.
+        if [ "${derive}" != "true" ]; then
+          if [ -n "${supplied}" ]; then
+            echo "::notice::feature build marked as ${supplied} (supplied by the caller)"
+          else
+            echo "::notice::no feature-build marker (supplied by the caller)"
+          fi
+          echo "marker=${supplied}" >>"${GITHUB_OUTPUT}"
+          exit 0
+        fi
+
+        # A caller that supplies a marker but has not yet opted out of the derivation is
+        # still taken at its word when it says something.
         if [ -n "${supplied}" ]; then
           echo "::notice::feature build marked as ${supplied} (supplied by the caller)"
           echo "marker=${supplied}" >>"${GITHUB_OUTPUT}"
