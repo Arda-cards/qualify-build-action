@@ -18,27 +18,24 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
   - `Fixed` for any bugfixes.
   - `Security` in case of vulnerabilities.
 
-## [2.2.0] - 2026-08-18
+## [2.2.0] - 2026-08-24
 
 ### Added
 
-- `derive_feature_marker`, to be set `false` by any caller supplying `feature_marker`.
-  Without it, "no marker" — the ordinary case — was indistinguishable from a caller that
-  said nothing, so an unmarked branch still fell through to the derivation. Measured on
-  2026-08-19: a merge group staging two entry files failed on the derivation's file count
-  even though the caller had already answered.
-- `feature_marker`, naming the feature-build marker for this ref so the action takes it as
-  given instead of deriving one. Deriving it meant knowing where a repository keeps its
-  changelog entries and how a marker is spelled inside one, which is the caller's
-  convention and not this action's — the repositories calling it do not share one.
+- `feature_marker`, so a caller can state the feature-build marker for the ref rather than
+  have it derived from `changelog_dir`. The derivation cannot see a marker written in a
+  pull-request body, and it refuses a changelog directory holding more than one entry —
+  which is what a merge queue stages whenever it batches two pull requests.
+- `derive_feature_marker`, selecting between the two sources and defaulting to `true` so
+  existing callers are unchanged. Supplying a marker while it is `true` is now refused
+  with an error naming both inputs: an empty marker means the branch is not a feature
+  build, and must not also read as the caller having said nothing.
 
-### Deprecated
+### Security
 
-- `changelog_dir`, now consulted only when `feature_marker` is unset. It cannot see a
-  marker written in a pull-request body, so one put there is silently ignored; and it
-  fails when the directory holds more than one entry file even if none of them carries a
-  marker, which blocks every build in a repository whose merge queue batches two entries
-  together. Both faults follow from reading the filesystem rather than being told.
+- The feature-build marker is restricted to `[A-Za-z0-9._-]` and passed through the
+  environment rather than interpolated into the script, closing a path by which a marker
+  taken from pull-request data could inject workflow commands or step outputs.
 
 ## [2.1.0] - 2026-08-06
 
