@@ -129,6 +129,14 @@ runs:
           exit 1
         fi
 
+        # This path is reported in workflow commands, where a line break would start a
+        # second command. A path may legitimately hold characters a marker may not, so
+        # the rule here is narrower than the marker's: no line breaks.
+        if [ "${CHANGELOG_DIR}" != "${CHANGELOG_DIR//[$'\r\n']/}" ]; then
+          echo "::error::changelog_dir must not contain line breaks: $(sanitise "${CHANGELOG_DIR}")"
+          exit 1
+        fi
+
         # The marker reaches a workflow command and a step output, so a value outside a
         # conservative character set is refused rather than escaped. Empty stays valid:
         # it is what every repository that marks nothing produces.
