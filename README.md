@@ -80,7 +80,7 @@ Markers are restricted to `[A-Za-z0-9._-]`.
 | `changelog_dir`                | `.changelog`                                    | Directory holding per-pull-request changelog files, read when `derive_feature_marker` is `true`. |
 | `derive_feature_marker`        | `true`                                          | Whether to read the marker from `changelog_dir` instead of taking it from `feature_marker`.     |
 | `feature_branch_version_regex` | `^[0-9]+(\.[0-9]+){2}(-[[:alnum:]]+){2}(-.+)?$` | A regular expression that identifies feature branch versions.                                   |
-| `feature_marker`               | *(empty)*                                       | The feature-build marker for this ref; requires `derive_feature_marker` to be `false`.          |
+| `feature_marker`               | *(empty)*                                       | The feature-build marker for this ref, used when `derive_feature_marker` is `false`; empty is valid. |
 | `validate_against_base`        | `true`                                          | Whether a pull request must introduce exactly one new changelog version.                        |
 | `workflow_name`                | `context:validate-release`                      | Name of the workflow context used to identify release-protected refs.                           |
 
