@@ -115,14 +115,27 @@ runs:
         readonly supplied="${FEATURE_MARKER}"
         readonly derive="${DERIVE_FEATURE_MARKER}"
 
+        # Caller-supplied values reach workflow commands, so they are reported through
+        # this rather than raw: anything outside the safe set becomes '?'.
+        function sanitise() {
+          printf '%s' "${1}" | tr -c '[:alnum:]._-' '?'
+        }
+
+        # A mode selector is only a selector if it is read exactly. Accepting anything
+        # that merely differs from "true" makes a typo choose the other mode in silence,
+        # and would let 'TRUE' slip past the mutual-exclusion check below.
+        if [ "${derive}" != "true" ] && [ "${derive}" != "false" ]; then
+          echo "::error::derive_feature_marker must be 'true' or 'false', not '$(sanitise "${derive}")'"
+          exit 1
+        fi
+
         # The marker reaches a workflow command and a step output, so a value outside a
         # conservative character set is refused rather than escaped. Empty stays valid:
         # it is what every repository that marks nothing produces.
         function emit() {
-          local value="${1}" origin="${2}" sanitised
+          local value="${1}" origin="${2}"
           if [ -n "${value}" ] && [[ ! "${value}" =~ ^[A-Za-z0-9._-]+$ ]]; then
-            sanitised="$(printf '%s' "${value}" | tr -c '[:alnum:]._-' '?')"
-            echo "::error::the feature-build marker ${origin} has characters outside [A-Za-z0-9._-]: ${sanitised}"
+            echo "::error::the feature-build marker ${origin} has characters outside [A-Za-z0-9._-]: $(sanitise "${value}")"
             exit 1
           fi
           if [ -n "${value}" ]; then

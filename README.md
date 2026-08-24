@@ -91,7 +91,7 @@ Markers are restricted to `[A-Za-z0-9._-]`.
 | `kind`    | Build kind to run: `publish` when the workflow should produce published artifacts, otherwise `test`.                                                     |
 | `tag`     | Version to tag, that is the version prefixed with a `v`. Set for publish builds; omitted for test builds.                                                |
 | `target`  | Target of the build: `feature` or `release`.                                                                                                             |
-| `trigger` | Build trigger classification: `push_to_feature_branch`, `push_to_release_branch`, `pull_request_to_release_branch`, or `pull_request_to_feature_branch`. |
+| `trigger` | Build trigger classification: one of the values listed in the trigger table above. |
 | `version` | Version to publish. Set for publish builds; omitted for test builds.                                                                                     |
 
 ## Usage
