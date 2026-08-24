@@ -16,7 +16,7 @@ inputs:
   derive_feature_marker:
     description: >-
       Whether to read the marker from `changelog_dir` instead of taking it from
-      `feature_marker`. Mutually exclusive with a non-empty `feature_marker`.
+      `feature_marker`. Must be `false` when `feature_marker` is non-empty.
     required: false
     default: "true"
   changelog_dir:
