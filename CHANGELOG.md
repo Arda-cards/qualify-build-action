@@ -18,6 +18,25 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
   - `Fixed` for any bugfixes.
   - `Security` in case of vulnerabilities.
 
+## [2.2.0] - 2026-08-24
+
+### Added
+
+- `feature_marker`, so a caller can state the feature-build marker for the ref rather than
+  have it derived from `changelog_dir`. The derivation cannot see a marker written in a
+  pull-request body, and it refuses a changelog directory holding more than one entry —
+  which is what a merge queue stages whenever it batches two pull requests.
+- `derive_feature_marker`, selecting between the two sources and defaulting to `true` so
+  existing callers are unchanged. Supplying a marker while it is `true` is now refused
+  with an error naming both inputs: an empty marker means the branch is not a feature
+  build, and must not also read as the caller having said nothing.
+
+### Security
+
+- The feature-build marker is restricted to `[A-Za-z0-9._-]` and passed through the
+  environment rather than interpolated into the script, closing a path by which a marker
+  taken from pull-request data could inject workflow commands or step outputs.
+
 ## [2.1.0] - 2026-08-06
 
 ### Added
