@@ -105,16 +105,9 @@ runs:
     - id: feature-marker
       name: "Is this branch marked as a feature build?"
       shell: bash
-      env:
-        FEATURE_MARKER: ${{ inputs.feature_marker }}
-        DERIVE_FEATURE_MARKER: ${{ inputs.derive_feature_marker }}
-        CHANGELOG_DIR: ${{ inputs.changelog_dir }}
       run: |
         [ "${{ runner.debug }}" == 1 ] && set -xv
         set -u
-
-        readonly supplied="${FEATURE_MARKER}"
-        readonly derive="${DERIVE_FEATURE_MARKER}"
 
         # Caller-supplied values reach workflow commands, so they are reported through
         # this rather than raw: anything outside the safe set becomes '?'.
@@ -125,16 +118,16 @@ runs:
         # A mode selector is only a selector if it is read exactly. Accepting anything
         # that merely differs from "true" makes a typo choose the other mode in silence,
         # and would let 'TRUE' slip past the mutual-exclusion check below.
-        if [ "${derive}" != "true" ] && [ "${derive}" != "false" ]; then
-          echo "::error::derive_feature_marker must be 'true' or 'false', not '$(sanitise "${derive}")'"
+        if [ "${{ inputs.derive_feature_marker }}" != "true" ] && [ "${{ inputs.derive_feature_marker }}" != "false" ]; then
+          echo "::error::derive_feature_marker must be 'true' or 'false', not '$(sanitise "${{ inputs.derive_feature_marker }}")'"
           exit 1
         fi
 
         # This path is reported in workflow commands, where a line break would start a
         # second command. A path may legitimately hold characters a marker may not, so
         # the rule here is narrower than the marker's: no line breaks.
-        if [ "${CHANGELOG_DIR}" != "${CHANGELOG_DIR//[$'\r\n']/}" ]; then
-          echo "::error::changelog_dir must not contain line breaks: $(sanitise "${CHANGELOG_DIR}")"
+        if [ "${{ inputs.changelog_dir }}" != "${CHANGELOG_DIR//[$'\r\n']/}" ]; then
+          echo "::error::changelog_dir must not contain line breaks: $(sanitise "${{ inputs.changelog_dir }}")"
           exit 1
         fi
 
@@ -156,23 +149,23 @@ runs:
         }
 
         # The two inputs name one choice, so a caller that sets both has not made it.
-        if [ "${derive}" == "true" ] && [ -n "${supplied}" ]; then
+        if [ "${{ inputs.derive_feature_marker }}" == "true" ] && [ -n "${{ inputs.feature_marker }}" ]; then
           msg="feature_marker was supplied but derive_feature_marker is 'true';"
           msg="${msg} these are mutually exclusive. Set derive_feature_marker to 'false'"
           msg="${msg} to use the supplied marker, or clear feature_marker to derive one"
-          msg="${msg} from ${CHANGELOG_DIR}"
+          msg="${msg} from ${{ inputs.changelog_dir }}"
           echo "::error::${msg}"
           exit 1
         fi
 
         # An empty answer is still an answer: an unmarked branch is the ordinary case, so
         # emptiness here cannot also mean that the caller said nothing.
-        if [ "${derive}" != "true" ]; then
-          emit "${supplied}" 'supplied by the caller'
+        if [ "${{ inputs.derive_feature_marker }}" != "true" ]; then
+          emit "${{ inputs.feature_marker }}" 'supplied by the caller'
           exit 0
         fi
 
-        readonly dir="${CHANGELOG_DIR}"
+        readonly dir="${{ inputs.changelog_dir }}"
         marker=''
 
         if [ -d "${dir}" ]; then
