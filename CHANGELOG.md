@@ -18,6 +18,14 @@ Categories, defined in [changemap.json](.github/clq/changemap.json):
   - `Fixed` for any bugfixes.
   - `Security` in case of vulnerabilities.
 
+## [2.2.1] - 2026-08-25
+
+### Fixed
+
+- The feature-build marker step read `CHANGELOG_DIR`, an environment variable no longer
+  set, so under `set -u` every build using this action failed before it could classify
+  anything. The check now reads the input it validates.
+
 ## [2.2.0] - 2026-08-24
 
 ### Added
