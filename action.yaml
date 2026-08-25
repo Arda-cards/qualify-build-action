@@ -123,11 +123,13 @@ runs:
           exit 1
         fi
 
+        readonly dir="${{ inputs.changelog_dir }}"
+
         # This path is reported in workflow commands, where a line break would start a
         # second command. A path may legitimately hold characters a marker may not, so
         # the rule here is narrower than the marker's: no line breaks.
-        if [ "${{ inputs.changelog_dir }}" != "${CHANGELOG_DIR//[$'\r\n']/}" ]; then
-          echo "::error::changelog_dir must not contain line breaks: $(sanitise "${{ inputs.changelog_dir }}")"
+        if [ "${dir}" != "${dir//[$'\r\n']/}" ]; then
+          echo "::error::changelog_dir must not contain line breaks: $(sanitise "${dir}")"
           exit 1
         fi
 
@@ -165,7 +167,6 @@ runs:
           exit 0
         fi
 
-        readonly dir="${{ inputs.changelog_dir }}"
         marker=''
 
         if [ -d "${dir}" ]; then
